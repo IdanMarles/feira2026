@@ -343,6 +343,10 @@ function renderCalc() {
 
 // ================= Cotação de referência (só consulta — a conta usa o câmbio digitado) =================
 let cotacaoRef = null;
+function fmtDataCot(s) {
+  const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : s;
+}
 function renderCotacaoRef() {
   const st = $("p-cambio-status");
   if (!st) return;
@@ -361,13 +365,13 @@ async function atualizarCambio(silencioso) {
       if (!res.ok) throw 0;
       const d = await res.json();
       usd = parseFloat(d.USDBRL.bid); eur = parseFloat(d.EURBRL.bid);
-      quando = d.USDBRL.create_date.slice(0, 16);
+      quando = fmtDataCot(d.USDBRL.create_date);
     } catch {
       const r1 = await fetch("https://open.er-api.com/v6/latest/USD");
       const r2 = await fetch("https://open.er-api.com/v6/latest/EUR");
       if (!r1.ok || !r2.ok) throw 0;
       usd = (await r1.json()).rates.BRL; eur = (await r2.json()).rates.BRL;
-      quando = new Date().toISOString().slice(0, 16).replace("T", " ");
+      quando = fmtDataCot(new Date().toISOString());
     }
     if (!(usd > 0) || !(eur > 0)) throw 0;
     cotacaoRef = { usd, eur, quando };
