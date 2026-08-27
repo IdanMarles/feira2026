@@ -55,6 +55,9 @@
   .mcard .pct { font-size: 11px; font-weight: 700; color: var(--indigo); text-transform: uppercase; letter-spacing: .04em; }
   .mcard .val { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 17px; margin-top: 3px; }
   .mcard .mk { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .modo { display: flex; background: var(--linen); border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 12px; }
+  .modo button { flex: 1; padding: 9px 0; border: none; border-radius: 8px; background: transparent; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .modo button.active { background: var(--ink); color: #fff; }
   .btn { width: 100%; padding: 13px 0; background: var(--indigo); color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: 'Archivo', sans-serif; }
   .btn:disabled { opacity: .5; }
   .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--indigo); font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer; width: auto; }
@@ -110,8 +113,12 @@
   <!-- ===== CALCULADORA ===== -->
   <section id="sec-calc">
     <div class="card">
+      <div class="modo">
+        <button id="modo-cv" class="active" onclick="setModo('cv')">Compra → Venda</button>
+        <button id="modo-vc" onclick="setModo('vc')">Venda → Compra</button>
+      </div>
       <div class="grid3">
-        <label><span class="lbl">Preço de compra</span><input id="c-preco" inputmode="decimal" placeholder="0,00" oninput="renderCalc()"></label>
+        <label><span class="lbl" id="c-preco-label">Preço de compra</span><input id="c-preco" inputmode="decimal" placeholder="0,00" oninput="renderCalc()"></label>
         <label><span class="lbl">Moeda</span><select id="c-moeda" onchange="renderCalc()"><option>EUR</option><option>USD</option></select></label>
         <label><span class="lbl">Unidade</span><select id="c-unidade" onchange="renderCalc()"><option value="m">por m</option><option value="kg">por kg</option></select></label>
       </div>
@@ -136,7 +143,7 @@
         <label style="display:flex; gap:8px; align-items:center; font-size:13.5px; margin-top:12px">
           <input type="checkbox" id="p-creditos" style="width:auto"> Descontar créditos tributários (Lucro Real: ICMS, PIS, COFINS e IPI recuperáveis)
         </label>
-        <p class="hint">Os parâmetros ficam salvos neste aparelho. Confirme as alíquotas por NCM com o despachante — os valores são referência.</p>
+        <p class="hint">Os parâmetros ficam sincronizados pelo Airtable (tabela Config): mudou em um aparelho, vale para todos. Confirme as alíquotas por NCM com o despachante — os valores são referência.</p>
       </div>
     </div>
   </section>
@@ -240,12 +247,56 @@ function calcular(preco, moeda, margemPct) {
   return { precoBRL, frete, VA, ii, ipi, pis, cofins, despesas, icms, custoCaixa, creditos, custoEfetivo, precoVenda, markup: custoEfetivo > 0 ? precoVenda / custoEfetivo : 0 };
 }
 
+let modo = "cv";
+function setModo(m) {
+  modo = m;
+  $("modo-cv").classList.toggle("active", m === "cv");
+  $("modo-vc").classList.toggle("active", m === "vc");
+  $("c-preco-label").textContent = m === "cv" ? "Preço de compra" : "Preço de venda no Brasil (R$)";
+  $("c-preco").placeholder = "0,00";
+  renderCalc();
+}
+
 function renderCalc() {
   const moeda = $("c-moeda").value, unidade = $("c-unidade").value;
   const cambio = moeda === "EUR" ? num(params.cambioEUR) : num(params.cambioUSD);
-  $("c-cambio-hint").textContent = `Câmbio usado: ${moeda} 1,00 = ${fmtBRL(cambio)} — ajuste em Parâmetros abaixo.`;
-  const r = calcular($("c-preco").value, moeda);
+  $("c-cambio-hint").textContent = modo === "cv"
+    ? `Câmbio usado: ${moeda} 1,00 = ${fmtBRL(cambio)} — ajuste em Parâmetros abaixo.`
+    : `Preço-teto de compra mostrado em ${moeda} (câmbio ${fmtBRL(cambio)}) — ajuste em Parâmetros abaixo.`;
   const el = $("c-resultado");
+
+  // ===== Modo Venda → Compra (engenharia reversa) =====
+  if (modo === "vc") {
+    const venda = num($("c-preco").value);
+    if (venda <= 0) { el.innerHTML = ""; return; }
+    const porUnidadeMoeda = calcular(1, moeda); // custo efetivo de 1 unidade da moeda
+    if (!porUnidadeMoeda || porUnidadeMoeda.custoEfetivo <= 0) { el.innerHTML = ""; return; }
+    const fmtMoeda = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: moeda });
+    const cartoes = getMargens().map(mg => {
+      const custoAlvo = venda * (1 - mg / 100);
+      const precoMax = custoAlvo / porUnidadeMoeda.custoEfetivo;
+      return `<div class="mcard">
+        <div class="pct">Margem ${mg.toLocaleString("pt-BR")}%</div>
+        <div class="val">${fmtMoeda(precoMax)}</div>
+        <div class="mk">custo alvo ${fmtBRL(custoAlvo)} · /${unidade}</div>
+      </div>`;
+    }).join("");
+    el.innerHTML = `
+      <div class="result">
+        <div class="cap">Vendendo no Brasil a</div>
+        <div class="big">${fmtBRL(venda)}<small> /${unidade}</small></div>
+        <div class="stats"><div><i>Leitura</i><b>Pague no máximo o valor de cada cartão para fechar a margem</b></div></div>
+      </div>
+      <div class="margens">${cartoes}</div>
+      <div class="card">
+        <h2>Como o teto é calculado</h2>
+        <p style="font-size:13.5px; margin:0; color:var(--muted)">Do preço de venda desce a margem desejada, chegando ao custo efetivo alvo. Daí o cálculo desfaz toda a nacionalização — câmbio, frete (${params.fretePct}%), II (${params.ii}%), IPI (${params.ipi}%), PIS/COFINS, ICMS por dentro (${params.icms}%), despesas (${params.despesasPct}%)${params.creditos ? " e créditos recuperáveis" : ""} — e devolve o preço máximo em ${moeda} para pagar ao fornecedor.</p>
+      </div>`;
+    return;
+  }
+
+  // ===== Modo Compra → Venda =====
+  const r = calcular($("c-preco").value, moeda);
   if (!r) { el.innerHTML = ""; return; }
   const margens = getMargens();
   const cartoes = margens.map(mg => {
@@ -284,6 +335,42 @@ function renderCalc() {
 }
 
 // ================= Parâmetros =================
+// Sincronização dos parâmetros pela tabela Config do Airtable (padrão único entre aparelhos)
+let paramsRecId = null, paramsSyncTimer = null;
+function configUrl() { return `https://api.airtable.com/v0/${cfg.base}/Config`; }
+
+async function loadParamsRemote() {
+  if (!cfgOk()) return;
+  try {
+    const res = await fetch(configUrl() + "?maxRecords=1&filterByFormula=" + encodeURIComponent('{Chave}="params"'), { headers: atHeaders() });
+    if (!res.ok) return; // tabela Config não existe ainda: segue com os locais
+    const data = await res.json();
+    if (data.records && data.records.length) {
+      paramsRecId = data.records[0].id;
+      try {
+        const remoto = JSON.parse(data.records[0].fields.Valor || "{}");
+        params = { ...DEFAULT_PARAMS, ...remoto };
+        localStorage.setItem("feira_params", JSON.stringify(params));
+        loadParamsUI(); renderCalc();
+        if (listaCache) renderLista(listaCache);
+      } catch {}
+    } else {
+      const cr = await fetch(configUrl(), { method: "POST", headers: atHeaders(), body: JSON.stringify({ records: [{ fields: { Chave: "params", Valor: JSON.stringify(params) } }] }) });
+      if (cr.ok) { const d = await cr.json(); paramsRecId = d.records[0].id; }
+    }
+  } catch {}
+}
+
+function scheduleParamsSync() {
+  if (!cfgOk() || !paramsRecId) return;
+  clearTimeout(paramsSyncTimer);
+  paramsSyncTimer = setTimeout(async () => {
+    try {
+      await fetch(configUrl() + "/" + paramsRecId, { method: "PATCH", headers: atHeaders(), body: JSON.stringify({ fields: { Valor: JSON.stringify(params) } }) });
+    } catch {}
+  }, 800);
+}
+
 function loadParamsUI() {
   PARAM_KEYS.forEach(k => { $("p-" + k).value = params[k]; $("p-" + k).oninput = saveParamsUI; });
   $("p-creditos").checked = !!params.creditos;
@@ -295,6 +382,7 @@ function saveParamsUI() {
   localStorage.setItem("feira_params", JSON.stringify(params));
   renderCalc();
   if (listaCache) renderLista(listaCache);
+  scheduleParamsSync();
 }
 function toggleParams() {
   const b = $("p-body"), open = b.style.display !== "none";
@@ -497,6 +585,7 @@ async function salvarCfg() {
     setMsg("cfg-msg", "Conexão OK ✓ Tudo pronto para usar.", false);
     $("banner-cfg").style.display = "none";
     listaCache = null;
+    loadParamsRemote();
   } catch (e) {
     setMsg("cfg-msg", e.message, true);
   }
@@ -511,6 +600,7 @@ function setMsg(id, txt, isErr) {
 loadParamsUI();
 loadCfgUI();
 renderCalc();
+loadParamsRemote();
 </script>
 </body>
 </html>
