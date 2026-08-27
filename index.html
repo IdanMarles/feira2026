@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>Feira de Tecidos · França</title>
+<title>Marles · Calculadora de Preço</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#1B2440" />
+<meta name="theme-color" content="#111111" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Feira Marles" />
+<meta name="apple-mobile-web-app-title" content="Marles" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --ink: #1B2440; --indigo: #2E4172; --linen: #F4F3EE; --thread: #D64541;
+    --ink: #111111; --indigo: #111111; --linen: #FAFAF9; --thread: #D64541;
     --muted: #6B7280; --line: #E3E1D9; --ok: #1E7A4D; --card: #FFFFFF;
   }
   * { box-sizing: border-box; }
@@ -25,17 +25,16 @@
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--indigo); outline-offset: 1px; }
   .masked { -webkit-text-security: disc; }
   label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 4px; }
-  header { background: var(--ink); color: #fff; padding: 18px 16px 14px; }
+  header { background: #fff; color: var(--ink); padding: 20px 16px 16px; border-bottom: 1px solid var(--line); }
   header .inner { max-width: 560px; margin: 0 auto; }
-  header h1 { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 20px; margin: 0; letter-spacing: -.01em; }
-  header p { font-size: 12.5px; opacity: .75; margin: 2px 0 0; }
-  header .thread { height: 2px; background: var(--thread); max-width: 560px; margin: 12px auto 0; }
+  header .logo { height: 30px; display: block; }
+  header p { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 8px 0 0; }
   nav { background: #fff; border-bottom: 1px solid var(--line); display: flex; max-width: 560px; margin: 0 auto; position: sticky; top: 0; z-index: 5; }
-  nav button { flex: 1; padding: 12px 0; border: none; background: transparent; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 13.5px; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; }
-  nav button.active { color: var(--ink); border-bottom-color: var(--thread); }
+  nav button { flex: 1; padding: 12px 0; border: none; background: transparent; font-family: 'Jost', sans-serif; font-weight: 700; font-size: 13.5px; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; }
+  nav button.active { color: var(--ink); border-bottom-color: var(--ink); }
   main { max-width: 560px; margin: 0 auto; padding: 16px 14px 40px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-  .card h2 { font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 14px; margin: 0 0 8px; }
+  .card h2 { font-family: 'Jost', sans-serif; font-weight: 700; font-size: 14px; margin: 0 0 8px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .grid3 { display: grid; grid-template-columns: 1fr 90px 90px; gap: 10px; }
   .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
@@ -45,21 +44,21 @@
   .row.strong span { color: var(--ink) !important; font-weight: 800; }
   .row.red span:last-child { color: var(--thread); }
   .result { background: var(--ink); color: #fff; border-radius: 12px; padding: 18px 16px 18px 26px; margin-bottom: 14px; position: relative; overflow: hidden; }
-  .result::before { content: ""; position: absolute; top: 0; bottom: 0; left: 10px; width: 2px; background: var(--thread); }
+  .result::before { content: ""; position: absolute; top: 0; bottom: 0; left: 10px; width: 2px; background: #fff; }
   .result .cap { font-size: 12px; opacity: .7; text-transform: uppercase; letter-spacing: .06em; }
-  .result .big { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 34px; margin-top: 2px; }
+  .result .big { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 34px; margin-top: 2px; }
   .result .big small { font-size: 16px; font-weight: 600; opacity: .7; }
   .result .stats { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; }
   .result .stats i { font-style: normal; opacity: .65; display: block; }
   .margens { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin-bottom: 14px; }
-  .mcard { background: var(--card); border: 1px solid var(--line); border-top: 3px solid var(--indigo); border-radius: 12px; padding: 12px 8px; text-align: center; }
+  .mcard { background: var(--card); border: 1px solid var(--line); border-top: 2px solid var(--ink); border-radius: 12px; padding: 12px 8px; text-align: center; }
   .mcard .pct { font-size: 11px; font-weight: 700; color: var(--indigo); text-transform: uppercase; letter-spacing: .04em; }
-  .mcard .val { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 17px; margin-top: 3px; }
+  .mcard .val { font-family: 'Jost', sans-serif; font-weight: 800; font-size: 17px; margin-top: 3px; }
   .mcard .mk { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .modo { display: flex; background: var(--linen); border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 12px; }
-  .modo button { flex: 1; padding: 9px 0; border: none; border-radius: 8px; background: transparent; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .modo button { flex: 1; padding: 9px 0; border: none; border-radius: 8px; background: transparent; font-family: 'Jost', sans-serif; font-weight: 700; font-size: 13px; color: var(--muted); cursor: pointer; }
   .modo button.active { background: var(--ink); color: #fff; }
-  .btn { width: 100%; padding: 13px 0; background: var(--indigo); color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: 'Archivo', sans-serif; }
+  .btn { width: 100%; padding: 13px 0; background: var(--indigo); color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: 'Jost', sans-serif; }
   .btn:disabled { opacity: .5; }
   .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--indigo); font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer; width: auto; }
   .msg-ok { color: var(--ok); font-weight: 600; font-size: 13.5px; }
@@ -71,8 +70,8 @@
   .fotos-grid .del { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--thread); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; line-height: 1; padding: 0; }
   .add-foto { width: 84px; height: 84px; border: 2px dashed var(--line); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--indigo); font-size: 12px; font-weight: 600; gap: 2px; }
   .tecido { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 14px 22px; margin-bottom: 12px; position: relative; }
-  .tecido::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--thread); border-radius: 12px 0 0 12px; }
-  .tecido h3 { font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 16px; margin: 0; display: inline; }
+  .tecido::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--ink); border-radius: 12px 0 0 12px; }
+  .tecido h3 { font-family: 'Jost', sans-serif; font-weight: 700; font-size: 16px; margin: 0; display: inline; }
   .tecido .data { font-size: 11.5px; color: var(--muted); float: right; }
   .tecido .forn { font-size: 13.5px; color: var(--indigo); font-weight: 600; margin-top: 2px; }
   .tecido .specs { font-size: 13px; color: var(--muted); margin-top: 4px; }
@@ -83,7 +82,7 @@
   .tecido .galeria img.amp { width: 100%; height: auto; }
   .del-tecido { margin-top: 10px; background: transparent; border: none; color: var(--thread); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; }
   .del-tecido:disabled { opacity: .5; }
-  .acc-head { width: 100%; padding: 14px 16px; background: transparent; border: none; cursor: pointer; display: flex; justify-content: space-between; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 14px; color: var(--ink); }
+  .acc-head { width: 100%; padding: 14px 16px; background: transparent; border: none; cursor: pointer; display: flex; justify-content: space-between; font-family: 'Jost', sans-serif; font-weight: 700; font-size: 14px; color: var(--ink); }
   .empty { border-style: dashed; text-align: center; color: var(--muted); font-size: 14px; padding: 24px; }
   .banner { background: #FFF7E6; border: 1px solid #F0DCA8; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 14px; }
   .field-group { margin-bottom: 12px; }
@@ -92,10 +91,9 @@
 <body>
 <header>
   <div class="inner">
-    <h1>Feira de Tecidos · França</h1>
-    <p>Custo de importação e caderno de compras — Marles</p>
+    <img src="logo-marles.png" alt="MARLES" class="logo" />
+    <p>Calculadora de Preço · Importação</p>
   </div>
-  <div class="thread"></div>
 </header>
 
 <nav>
