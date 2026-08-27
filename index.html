@@ -23,6 +23,7 @@
   input, select, textarea, button { font-family: 'Inter', sans-serif; font-size: 16px; }
   input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--indigo); outline-offset: 1px; }
+  .masked { -webkit-text-security: disc; }
   label > .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 4px; }
   header { background: var(--ink); color: #fff; padding: 18px 16px 14px; }
   header .inner { max-width: 560px; margin: 0 auto; }
@@ -119,7 +120,7 @@
       </div>
       <div class="grid3">
         <label><span class="lbl" id="c-preco-label">Preço de compra</span><input id="c-preco" inputmode="decimal" placeholder="0,00" oninput="renderCalc()"></label>
-        <label><span class="lbl">Moeda</span><select id="c-moeda" onchange="renderCalc()"><option>EUR</option><option>USD</option></select></label>
+        <label><span class="lbl">Moeda</span><select id="c-moeda" onchange="renderCalc()"><option>USD</option><option>EUR</option></select></label>
         <label><span class="lbl">Unidade</span><select id="c-unidade" onchange="renderCalc()"><option value="m">por m</option><option value="kg">por kg</option></select></label>
       </div>
       <div class="hint" id="c-cambio-hint" style="margin-top:8px"></div>
@@ -162,7 +163,7 @@
         <label><span class="lbl">Preço</span><input id="f-preco" inputmode="decimal" placeholder="0,00"></label>
       </div>
       <div class="grid2 field-group">
-        <label><span class="lbl">Moeda</span><select id="f-moeda"><option>EUR</option><option>USD</option></select></label>
+        <label><span class="lbl">Moeda</span><select id="f-moeda"><option>USD</option><option>EUR</option></select></label>
         <label><span class="lbl">Unidade</span><select id="f-unidade"><option value="m">por m</option><option value="kg">por kg</option></select></label>
       </div>
       <div class="field-group">
@@ -194,7 +195,7 @@
   <section id="sec-cfg" style="display:none">
     <div class="card">
       <h2>Conexão com o Airtable</h2>
-      <div class="field-group"><label><span class="lbl">Token de acesso (PAT)</span><input id="cfg-token" type="password" placeholder="pat..."></label></div>
+      <div class="field-group"><label><span class="lbl">Token de acesso (PAT)</span><input id="cfg-token" class="masked" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="pat..."></label></div>
       <div class="field-group"><label><span class="lbl">ID da base</span><input id="cfg-base" placeholder="app..."></label></div>
       <div class="field-group"><label><span class="lbl">Nome da tabela</span><input id="cfg-table" placeholder="Tecidos"></label></div>
       <button class="btn" onclick="salvarCfg()">Salvar e testar conexão</button>
@@ -523,7 +524,7 @@ function renderLista(records) {
   }
   $("lista-body").innerHTML = records.map(r => {
     const f = r.fields;
-    const rc = f.Preco ? calcular(f.Preco, f.Moeda || "EUR") : null;
+    const rc = f.Preco ? calcular(f.Preco, f.Moeda || "USD") : null;
     const specs = [f.Composicao, f.Gramatura && f.Gramatura + " g/m²", f.Largura && f.Largura + " m"].filter(Boolean).join(" · ");
     const fotos = (f.Fotos || []).map(a => {
       const thumb = (a.thumbnails && a.thumbnails.large && a.thumbnails.large.url) || a.url;
@@ -535,11 +536,11 @@ function renderLista(records) {
       ${f.Fornecedor ? `<div class="forn">${esc(f.Fornecedor)}</div>` : ""}
       ${specs ? `<div class="specs">${esc(specs)}</div>` : ""}
       ${f.Preco ? `<div class="precos">
-        <span><b>${esc(f.Moeda || "EUR")} ${f.Preco}</b>/${esc(f.Unidade || "m")}</span>
+        <span><b>${esc(f.Moeda || "USD")} ${f.Preco}</b>/${esc(f.Unidade || "m")}</span>
         ${rc ? `<span style="color:var(--muted)">Custo efetivo: <b style="color:var(--ink)">${fmtBRL(rc.custoEfetivo)}</b></span>` : ""}
       </div>
       ${rc ? `<div class="precos" style="margin-top:4px">
-        ${getMargens().map(mg => { const rm = calcular(f.Preco, f.Moeda || "EUR", mg); return `<span style="color:var(--muted)">${mg.toLocaleString("pt-BR")}%: <b style="color:var(--ok)">${fmtBRL(rm.precoVenda)}</b></span>`; }).join("")}
+        ${getMargens().map(mg => { const rm = calcular(f.Preco, f.Moeda || "USD", mg); return `<span style="color:var(--muted)">${mg.toLocaleString("pt-BR")}%: <b style="color:var(--ok)">${fmtBRL(rm.precoVenda)}</b></span>`; }).join("")}
       </div>` : ""}` : ""}
       ${f.Observacoes ? `<div class="obs">${esc(f.Observacoes)}</div>` : ""}
       ${fotos ? `<div class="galeria">${fotos}</div><p class="hint">Toque na foto para ampliar</p>` : ""}
@@ -597,6 +598,11 @@ function setMsg(id, txt, isErr) {
 }
 
 // ================= Init =================
+// Desligar o preenchimento automático em todos os campos (evita o gerenciador de senhas do Android)
+document.querySelectorAll("input, textarea").forEach(el => {
+  el.setAttribute("autocomplete", "off");
+  el.setAttribute("autocorrect", "off");
+});
 loadParamsUI();
 loadCfgUI();
 renderCalc();
