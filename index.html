@@ -132,6 +132,10 @@
         <div class="grid2">
           <label><span class="lbl">Câmbio EUR (R$)</span><input id="p-cambioEUR" inputmode="decimal"></label>
           <label><span class="lbl">Câmbio USD (R$)</span><input id="p-cambioUSD" inputmode="decimal"></label>
+          <div style="grid-column:1 / -1; display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <button type="button" class="btn-ghost" onclick="atualizarCambio(false)">↻ Buscar cotação agora</button>
+            <span class="hint" id="p-cambio-status"></span>
+          </div>
           <label><span class="lbl">Frete + seguro (%)</span><input id="p-fretePct" inputmode="decimal"></label>
           <label><span class="lbl">Despesas nacionaliz. (%)</span><input id="p-despesasPct" inputmode="decimal"></label>
           <label><span class="lbl">II (%)</span><input id="p-ii" inputmode="decimal"></label>
@@ -261,9 +265,11 @@ function setModo(m) {
 function renderCalc() {
   const moeda = $("c-moeda").value, unidade = $("c-unidade").value;
   const cambio = moeda === "EUR" ? num(params.cambioEUR) : num(params.cambioUSD);
-  $("c-cambio-hint").textContent = modo === "cv"
+  const hintUsado = modo === "cv"
     ? `Câmbio usado: ${moeda} 1,00 = ${fmtBRL(cambio)} — ajuste em Parâmetros abaixo.`
     : `Preço-teto de compra mostrado em ${moeda} (câmbio ${fmtBRL(cambio)}) — ajuste em Parâmetros abaixo.`;
+  const ref = cotacaoRef ? `<br><span style="font-size:11.5px; opacity:.85">Cotação atual (referência): US$ ${cotacaoRef.usd.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})} · € ${cotacaoRef.eur.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})} — ${cotacaoRef.quando}</span>` : "";
+  $("c-cambio-hint").innerHTML = hintUsado + ref;
   const el = $("c-resultado");
 
   // ===== Modo Venda → Compra (engenharia reversa) =====
@@ -333,6 +339,42 @@ function renderCalc() {
       ${params.creditos ? `<div class="row red"><span>(−) Créditos ICMS/PIS/COFINS/IPI</span><span>− ${fmtBRL(r.creditos)}</span></div>` : ""}
       <div class="row strong"><span>Custo efetivo</span><span>${fmtBRL(r.custoEfetivo)}</span></div>
     </div>`;
+}
+
+// ================= Cotação de referência (só consulta — a conta usa o câmbio digitado) =================
+let cotacaoRef = null;
+function renderCotacaoRef() {
+  const st = $("p-cambio-status");
+  if (!st) return;
+  if (cotacaoRef) {
+    st.textContent = `Cotação atual (referência): US$ ${cotacaoRef.usd.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})} · € ${cotacaoRef.eur.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:4})} — ${cotacaoRef.quando}`;
+  }
+  renderCalc();
+}
+async function atualizarCambio(silencioso) {
+  const st = $("p-cambio-status");
+  if (st && !silencioso) st.textContent = "Buscando cotação…";
+  try {
+    let usd, eur, quando;
+    try {
+      const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL");
+      if (!res.ok) throw 0;
+      const d = await res.json();
+      usd = parseFloat(d.USDBRL.bid); eur = parseFloat(d.EURBRL.bid);
+      quando = d.USDBRL.create_date.slice(0, 16);
+    } catch {
+      const r1 = await fetch("https://open.er-api.com/v6/latest/USD");
+      const r2 = await fetch("https://open.er-api.com/v6/latest/EUR");
+      if (!r1.ok || !r2.ok) throw 0;
+      usd = (await r1.json()).rates.BRL; eur = (await r2.json()).rates.BRL;
+      quando = new Date().toISOString().slice(0, 16).replace("T", " ");
+    }
+    if (!(usd > 0) || !(eur > 0)) throw 0;
+    cotacaoRef = { usd, eur, quando };
+    renderCotacaoRef();
+  } catch {
+    if (st && !silencioso) st.textContent = "Não foi possível buscar a cotação agora.";
+  }
 }
 
 // ================= Parâmetros =================
@@ -606,7 +648,7 @@ document.querySelectorAll("input, textarea").forEach(el => {
 loadParamsUI();
 loadCfgUI();
 renderCalc();
-loadParamsRemote();
+loadParamsRemote().then(() => atualizarCambio(true));
 </script>
 </body>
 </html>
