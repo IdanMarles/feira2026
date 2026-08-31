@@ -87,6 +87,8 @@
   .empty { border-style: dashed; text-align: center; color: var(--muted); font-size: 13.5px; padding: 28px 20px; box-shadow: none; }
   .banner { background: #FBF6E8; border: 1px solid #E8D9AE; border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 16px; }
   .field-group { margin-bottom: 14px; }
+  .p-sec { font-size: 10px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--brass); margin-top: 6px; display: flex; align-items: center; gap: 12px; }
+  .p-sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .masked { -webkit-text-security: disc; }
 </style>
 </head>
@@ -127,7 +129,7 @@
     </div>
     <div id="c-resultado"></div>
     <div class="card" style="padding:0">
-      <button class="acc-head" onclick="toggleParams()"><span>Parâmetros (câmbio, impostos, margem)</span><span id="p-arrow">▼</span></button>
+      <button class="acc-head" onclick="toggleParams()"><span>Parâmetros (câmbio, importação, venda, margens)</span><span id="p-arrow">▼</span></button>
       <div id="p-body" style="display:none; padding:0 16px 16px">
         <div class="grid2">
           <label><span class="lbl">Câmbio EUR (R$)</span><input id="p-cambioEUR" inputmode="decimal"></label>
@@ -136,19 +138,33 @@
             <button type="button" class="btn-ghost" onclick="atualizarCambio(false)">↻ Buscar cotação agora</button>
             <span class="hint" id="p-cambio-status"></span>
           </div>
-          <label><span class="lbl">Frete + seguro (%)</span><input id="p-fretePct" inputmode="decimal"></label>
-          <label><span class="lbl">Despesas nacionaliz. (%)</span><input id="p-despesasPct" inputmode="decimal"></label>
+          <div class="p-sec" style="grid-column:1 / -1">Importação</div>
+          <label><span class="lbl">Frete internac. (% s/ FOB)</span><input id="p-freteFobPct" inputmode="decimal"></label>
+          <label><span class="lbl">Despesas nacionaliz. (% s/ CIF)</span><input id="p-despCifPct" inputmode="decimal"></label>
+          <div style="grid-column:1 / -1; display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+            <span class="hint">Perfis:</span>
+            <button type="button" class="btn-ghost" onclick="aplicarPerfil('basico')">Tecido básico · 4,7 / 2,4</button>
+            <button type="button" class="btn-ghost" onclick="aplicarPerfil('premium')">Tecido premium · 1,7 / 1,4</button>
+          </div>
           <label><span class="lbl">II (%)</span><input id="p-ii" inputmode="decimal"></label>
           <label><span class="lbl">IPI (%)</span><input id="p-ipi" inputmode="decimal"></label>
-          <label><span class="lbl">PIS (%)</span><input id="p-pis" inputmode="decimal"></label>
-          <label><span class="lbl">COFINS (%)</span><input id="p-cofins" inputmode="decimal"></label>
-          <label><span class="lbl">ICMS (%)</span><input id="p-icms" inputmode="decimal"></label>
-          <label style="grid-column:1 / -1"><span class="lbl">Margens dos cartões (%) — separe por vírgula</span><input id="p-margens" placeholder="30, 40, 50"></label>
+          <label><span class="lbl">PIS-importação (%)</span><input id="p-pisImp" inputmode="decimal"></label>
+          <label><span class="lbl">COFINS-importação (%)</span><input id="p-cofinsImp" inputmode="decimal"></label>
+          <label><span class="lbl">ICMS-import. alíquota (%)</span><input id="p-icmsImp" inputmode="decimal"></label>
+          <label><span class="lbl">ICMS-import. base (%)</span><input id="p-icmsImpBase" inputmode="decimal"></label>
+          <div class="p-sec" style="grid-column:1 / -1">Venda</div>
+          <label><span class="lbl">ICMS venda (%)</span><input id="p-icmsVenda" inputmode="decimal"></label>
+          <label><span class="lbl">Comissão (%)</span><input id="p-comissao" inputmode="decimal"></label>
+          <label><span class="lbl">PIS venda (%)</span><input id="p-pisVenda" inputmode="decimal"></label>
+          <label><span class="lbl">COFINS venda (%)</span><input id="p-cofinsVenda" inputmode="decimal"></label>
+          <label><span class="lbl">Frete sobre venda (%)</span><input id="p-freteVenda" inputmode="decimal"></label>
+          <label style="align-self:end"><span class="lbl">&nbsp;</span></label>
+          <label style="grid-column:1 / -1"><span class="lbl">Margens de contribuição dos cartões (%) — separe por vírgula</span><input id="p-margens" placeholder="20, 25, 30"></label>
         </div>
         <label style="display:flex; gap:8px; align-items:center; font-size:13.5px; margin-top:12px">
           <input type="checkbox" id="p-creditos" style="width:auto"> Descontar créditos tributários (Lucro Real: ICMS, PIS, COFINS e IPI recuperáveis)
         </label>
-        <p class="hint">Os parâmetros ficam sincronizados pelo Airtable (tabela Config): mudou em um aparelho, vale para todos. Confirme as alíquotas por NCM com o despachante — os valores são referência.</p>
+        <p class="hint">Frete e despesas em % calibrados pela planilha Shunman (embarque real): custos fixos por container diluem em tecidos mais caros — use o perfil que combina com o artigo. Os cartões mostram margem de contribuição: do preço descem os custos de venda (ICMS + PIS + COFINS + frete + comissão) e o custo de importação. ICMS-importação vem por padrão no regime TTD (1,4% sobre base /0,96); sem TTD, digite a alíquota cheia nos dois campos (ex.: 18 e 18). Parâmetros sincronizados pelo Airtable — mudou em um aparelho, vale para todos. Confirme alíquotas por NCM com o despachante.</p>
       </div>
     </div>
   </section>
@@ -211,8 +227,26 @@
 
 <script>
 // ================= Config e parâmetros =================
-const DEFAULT_PARAMS = { cambioEUR:"6.30", cambioUSD:"5.40", fretePct:"8", ii:"26", ipi:"0", pis:"2.1", cofins:"9.65", icms:"18", despesasPct:"5", margens:"30, 40, 50", creditos:true };
-const PARAM_KEYS = ["cambioEUR","cambioUSD","fretePct","despesasPct","ii","ipi","pis","cofins","icms","margens"];
+const DEFAULT_PARAMS = {
+  cambioEUR:"6.30", cambioUSD:"5.40",
+  freteFobPct:"4.7", despCifPct:"2.4",
+  ii:"26", ipi:"0", pisImp:"2.1", cofinsImp:"10.25", icmsImp:"1.4", icmsImpBase:"4",
+  icmsVenda:"4", pisVenda:"1.65", cofinsVenda:"7.6", freteVenda:"1.5", comissao:"3",
+  margens:"20, 25, 30", creditos:true
+};
+const PARAM_KEYS = ["cambioEUR","cambioUSD","freteFobPct","despCifPct","ii","ipi","pisImp","cofinsImp","icmsImp","icmsImpBase","icmsVenda","pisVenda","cofinsVenda","freteVenda","comissao","margens"];
+// Perfis calibrados pela planilha Shunman (ciclo 09): custos fixos por embarque diluem conforme o preço do tecido
+const PERFIS = {
+  basico:  { freteFobPct: "4.7", despCifPct: "2.4" },  // tecido ~US$ 1/m
+  premium: { freteFobPct: "1.7", despCifPct: "1.4" }   // tecido ~US$ 3/m
+};
+function aplicarPerfil(nome) {
+  Object.assign(params, PERFIS[nome]);
+  localStorage.setItem("feira_params", JSON.stringify(params));
+  loadParamsUI(); renderCalc();
+  if (listaCache) renderLista(listaCache);
+  scheduleParamsSync();
+}
 let params = { ...DEFAULT_PARAMS, ...(JSON.parse(localStorage.getItem("feira_params") || "{}")) };
 let cfg = JSON.parse(localStorage.getItem("feira_cfg") || "{}");
 let fotosForm = [];
@@ -230,26 +264,35 @@ function getMargens() {
 }
 
 // ================= Cálculo =================
+// Custos de venda como fração do preço (ICMS + PIS + COFINS + frete + comissão)
+function custosVendaPct() {
+  return (num(params.icmsVenda) + num(params.pisVenda) + num(params.cofinsVenda) + num(params.freteVenda) + num(params.comissao)) / 100;
+}
 function calcular(preco, moeda, margemPct) {
   const cambio = moeda === "EUR" ? num(params.cambioEUR) : num(params.cambioUSD);
   const precoBRL = num(preco) * cambio;
   if (precoBRL <= 0) return null;
-  const frete = precoBRL * (num(params.fretePct) / 100);
-  const VA = precoBRL + frete;
+  const frete = precoBRL * (num(params.freteFobPct) / 100); // % sobre o valor FOB
+  const VA = precoBRL + frete; // CIF
   const ii = VA * (num(params.ii) / 100);
   const ipi = (VA + ii) * (num(params.ipi) / 100);
-  const pis = VA * (num(params.pis) / 100);
-  const cofins = VA * (num(params.cofins) / 100);
-  const despesas = VA * (num(params.despesasPct) / 100);
-  const aliq = num(params.icms) / 100;
-  const baseIcms = aliq < 1 ? (VA + ii + ipi + pis + cofins + despesas) / (1 - aliq) : 0;
-  const icms = baseIcms * aliq;
+  const pis = VA * (num(params.pisImp) / 100);
+  const cofins = VA * (num(params.cofinsImp) / 100);
+  const despesas = VA * (num(params.despCifPct) / 100); // % sobre o CIF
+  // ICMS de importação: alíquota efetiva sobre base "por dentro" (TTD: 1,4% com base /0,96)
+  const aliqIcms = num(params.icmsImp) / 100;
+  const baseDiv = 1 - (num(params.icmsImpBase) / 100);
+  const baseIcms = baseDiv > 0 ? (VA + ii + ipi + pis + cofins) / baseDiv : 0;
+  const icms = baseIcms * aliqIcms;
   const custoCaixa = VA + ii + ipi + pis + cofins + icms + despesas;
   const creditos = params.creditos ? icms + pis + cofins + ipi : 0;
   const custoEfetivo = custoCaixa - creditos;
+  // Margem de contribuição: MC = (P − P·custosVenda − custoEfetivo) / P
+  const cv = custosVendaPct();
   const m = (margemPct !== undefined ? margemPct : getMargens()[0]) / 100;
-  const precoVenda = m < 1 ? custoEfetivo / (1 - m) : custoEfetivo;
-  return { precoBRL, frete, VA, ii, ipi, pis, cofins, despesas, icms, custoCaixa, creditos, custoEfetivo, precoVenda, markup: custoEfetivo > 0 ? precoVenda / custoEfetivo : 0 };
+  const div = 1 - cv - m;
+  const precoVenda = div > 0 ? custoEfetivo / div : Infinity;
+  return { precoBRL, frete, VA, ii, ipi, pis, cofins, despesas, icms, custoCaixa, creditos, custoEfetivo, cv, precoVenda, markup: custoEfetivo > 0 && isFinite(precoVenda) ? precoVenda / custoEfetivo : 0 };
 }
 
 let modo = "cv";
@@ -276,28 +319,32 @@ function renderCalc() {
   if (modo === "vc") {
     const venda = num($("c-preco").value);
     if (venda <= 0) { el.innerHTML = ""; return; }
-    const porUnidadeMoeda = calcular(1, moeda); // custo efetivo de 1 unidade da moeda
-    if (!porUnidadeMoeda || porUnidadeMoeda.custoEfetivo <= 0) { el.innerHTML = ""; return; }
-    const fmtMoeda = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: moeda });
+    // Custo efetivo é afim no preço: custo(p) = k·p + c (c = frete + despesas rateados por unidade)
+    const r1 = calcular(1, moeda), r2 = calcular(2, moeda);
+    if (!r1 || !r2) { el.innerHTML = ""; return; }
+    const k = r2.custoEfetivo - r1.custoEfetivo, cFixo = r1.custoEfetivo - k;
+    if (k <= 0) { el.innerHTML = ""; return; }
+    const fmtMoeda = (v) => isFinite(v) && v > 0 ? v.toLocaleString("pt-BR", { style: "currency", currency: moeda }) : "—";
+    const cv = custosVendaPct();
     const cartoes = getMargens().map(mg => {
-      const custoAlvo = venda * (1 - mg / 100);
-      const precoMax = custoAlvo / porUnidadeMoeda.custoEfetivo;
+      const custoAlvo = venda * (1 - cv - mg / 100);
+      const precoMax = (custoAlvo - cFixo) / k;
       return `<div class="mcard">
-        <div class="pct">Margem ${mg.toLocaleString("pt-BR")}%</div>
+        <div class="pct">MC ${mg.toLocaleString("pt-BR")}%</div>
         <div class="val">${fmtMoeda(precoMax)}</div>
-        <div class="mk">custo alvo ${fmtBRL(custoAlvo)} · /${unidade}</div>
+        <div class="mk">custo alvo ${custoAlvo > 0 ? fmtBRL(custoAlvo) : "inviável"} · /${unidade}</div>
       </div>`;
     }).join("");
     el.innerHTML = `
       <div class="result">
         <div class="cap">Vendendo no Brasil a</div>
         <div class="big">${fmtBRL(venda)}<small> /${unidade}</small></div>
-        <div class="stats"><div><i>Leitura</i><b>Pague no máximo o valor de cada cartão para fechar a margem</b></div></div>
+        <div class="stats"><div><i>Custos de venda</i><b>${(cv*100).toLocaleString("pt-BR",{maximumFractionDigits:2})}%</b></div><div><i>Leitura</i><b>Pague no máximo o valor de cada cartão para fechar a MC</b></div></div>
       </div>
       <div class="margens">${cartoes}</div>
       <div class="card">
         <h2>Como o teto é calculado</h2>
-        <p style="font-size:13.5px; margin:0; color:var(--muted)">Do preço de venda desce a margem desejada, chegando ao custo efetivo alvo. Daí o cálculo desfaz toda a nacionalização — câmbio, frete (${params.fretePct}%), II (${params.ii}%), IPI (${params.ipi}%), PIS/COFINS, ICMS por dentro (${params.icms}%), despesas (${params.despesasPct}%)${params.creditos ? " e créditos recuperáveis" : ""} — e devolve o preço máximo em ${moeda} para pagar ao fornecedor.</p>
+        <p style="font-size:13.5px; margin:0; color:var(--muted)">Do preço de venda descem os custos de venda (ICMS ${params.icmsVenda}% + PIS ${params.pisVenda}% + COFINS ${params.cofinsVenda}% + frete ${params.freteVenda}% + comissão ${params.comissao}%) e a margem de contribuição desejada, chegando ao custo efetivo alvo. Daí o cálculo desfaz a nacionalização — câmbio, frete e despesas rateados pelo embarque, II (${params.ii}%), PIS/COFINS-importação, ICMS-importação (${params.icmsImp}%), despesas (${params.despesasPct}%)${params.creditos ? " e créditos recuperáveis" : ""} — e devolve o preço máximo em ${moeda} para pagar ao fornecedor.</p>
       </div>`;
     return;
   }
@@ -309,9 +356,9 @@ function renderCalc() {
   const cartoes = margens.map(mg => {
     const rm = calcular($("c-preco").value, moeda, mg);
     return `<div class="mcard">
-      <div class="pct">Margem ${mg.toLocaleString("pt-BR")}%</div>
+      <div class="pct">MC ${mg.toLocaleString("pt-BR")}%</div>
       <div class="val">${fmtBRL(rm.precoVenda)}</div>
-      <div class="mk">${rm.markup.toLocaleString("pt-BR",{maximumFractionDigits:2})}× · /${unidade}</div>
+      <div class="mk">${rm.markup > 0 ? rm.markup.toLocaleString("pt-BR",{maximumFractionDigits:2}) + "×" : "inviável"} · /${unidade}</div>
     </div>`;
   }).join("");
   el.innerHTML = `
@@ -321,20 +368,21 @@ function renderCalc() {
       <div class="stats">
         <div><i>Custo caixa</i><b>${fmtBRL(r.custoCaixa)}</b></div>
         <div><i>Mercadoria</i><b>${fmtBRL(r.precoBRL)}</b></div>
+        <div><i>Custos de venda</i><b>${(r.cv*100).toLocaleString("pt-BR",{maximumFractionDigits:2})}%</b></div>
       </div>
     </div>
     <div class="margens">${cartoes}</div>
     <div class="card">
       <h2>Composição do custo (por ${unidade})</h2>
       <div class="row"><span>Mercadoria (${moeda} × câmbio)</span><span>${fmtBRL(r.precoBRL)}</span></div>
-      <div class="row"><span>Frete + seguro (${params.fretePct}%)</span><span>${fmtBRL(r.frete)}</span></div>
+      <div class="row"><span>Frete internacional (${params.freteFobPct}% s/ FOB)</span><span>${fmtBRL(r.frete)}</span></div>
       <div class="row"><span>Valor aduaneiro</span><span>${fmtBRL(r.VA)}</span></div>
       <div class="row"><span>II (${params.ii}%)</span><span>${fmtBRL(r.ii)}</span></div>
       <div class="row"><span>IPI (${params.ipi}%)</span><span>${fmtBRL(r.ipi)}</span></div>
-      <div class="row"><span>PIS (${params.pis}%)</span><span>${fmtBRL(r.pis)}</span></div>
-      <div class="row"><span>COFINS (${params.cofins}%)</span><span>${fmtBRL(r.cofins)}</span></div>
-      <div class="row"><span>ICMS por dentro (${params.icms}%)</span><span>${fmtBRL(r.icms)}</span></div>
-      <div class="row"><span>Despesas de nacionalização (${params.despesasPct}%)</span><span>${fmtBRL(r.despesas)}</span></div>
+      <div class="row"><span>PIS-importação (${params.pisImp}%)</span><span>${fmtBRL(r.pis)}</span></div>
+      <div class="row"><span>COFINS-importação (${params.cofinsImp}%)</span><span>${fmtBRL(r.cofins)}</span></div>
+      <div class="row"><span>ICMS-importação (${params.icmsImp}% · base /${(1-num(params.icmsImpBase)/100).toLocaleString("pt-BR",{maximumFractionDigits:2})})</span><span>${fmtBRL(r.icms)}</span></div>
+      <div class="row"><span>Despesas de nacionalização (${params.despCifPct}% s/ CIF)</span><span>${fmtBRL(r.despesas)}</span></div>
       <div class="row strong"><span>Custo caixa total</span><span>${fmtBRL(r.custoCaixa)}</span></div>
       ${params.creditos ? `<div class="row red"><span>(−) Créditos ICMS/PIS/COFINS/IPI</span><span>− ${fmtBRL(r.creditos)}</span></div>` : ""}
       <div class="row strong"><span>Custo efetivo</span><span>${fmtBRL(r.custoEfetivo)}</span></div>
